@@ -11,6 +11,10 @@
   margin: 4px;
 }
 
+.square.win {
+  background: #063106;
+}
+
 .board-row {
   display: flex;
 }
@@ -25,6 +29,11 @@
 }
 
 .history-item {
-  width: 100px;
+  width: 200px;
   margin: 4px;
+}
+
+.history-label {
+  font-weight: 500;
+  padding: 0.4em;
 }
