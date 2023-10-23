@@ -1,137 +1,114 @@
-import { useState } from 'react'
 import './App.css'
+import { useState } from "react"
 
-function Square({ win, value, onClick }) {
-  return (
-    <button className={`square ${win ? "win" : ""}`} onClick={onClick}>{value}</button>
-  )
+function ProductCategoryRow({ title }) {
+    return (
+        <tr>
+            <td colSpan={2}>
+                {title}
+            </td>
+        </tr>
+    )
 }
 
-function Board({ squares, xIsNext, onSquareClick }) {
-  const end = squares.every((i) => i)
-  const result = calculateWinner(squares)
-  const info = !!result.length
-    ? `Winner: ${xIsNext ? "O" : "X"}`
-    : !end ? `Next player: ${xIsNext ? "X" : "O"}` : `Draw!!`
-
-  const boardRows = []
-  for (let i = 0; i < 3; i++) {
-    const boardColumns = []
-    for (let j = 0; j < 3; j++) {
-      const idx = 3 * i + j
-      boardColumns[j] = (
-        <Square
-          key={j}
-          win={result.includes(idx)}
-          value={squares[idx]}
-          onClick={() => onSquareClick(idx, [i, j])}
-        />
-      )
-    }
-    boardRows[i] = <div key={i} className='board-row'>{boardColumns}</div>
-  }
-
-  return (
-    <div className='board'>
-      {boardRows}
-      <div>{info}</div>
-    </div>
-  )
+function ProductRow({ item }) {
+    const name = item.stocked ? item.name : (
+        <span style={{ color: "red" }}>{item.name}</span>
+    )
+    return (
+        <tr>
+            <td>{name}</td>
+            <td>{item.price}</td>
+        </tr>
+    )
 }
 
-function History({ histories, onItemClick }) {
-  const [sortAsc, setSortAsc] = useState(true)
+function ProductTable({ data }) {
+    const rows = []
+    let lastCategory = ""
 
-  function handleSortClick() {
-    setSortAsc(!sortAsc)
-  }
+    data.forEach(i => {
+        if (i.category !== lastCategory) {
+            rows.push(<ProductCategoryRow key={i.category} title={i.category} />)
+        }
 
-  const historiesComponents = histories.map((item, i) => {
-    if (histories > 1 && i === histories.length - 1) return
+        rows.push(<ProductRow key={i.name} item={i} />)
+
+        lastCategory = i.category
+    })
 
     return (
-      <button key={i} className='history-item' onClick={() => onItemClick(i)}>
-        {i === 0 ? "Go to game start" : `Go to move #${i} (${item.move.join(",")})`}
-      </button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows}
+            </tbody>
+        </table>
     )
-  })
+}
 
-  if (!sortAsc) {
-    historiesComponents.reverse()
-  }
+function SearchBar({ filterText, inStockOnly, onFilterTextChange, onInStockChange }) {
+    return (
+        <form>
+            <div>
+                <input value={filterText} type="text" placeholder="Search..." onChange={e => onFilterTextChange(e.target.value)} />
+            </div>
+            <label htmlFor="in-stock">
+                <input id="in-stock" checked={inStockOnly} type="checkbox" onChange={e => onInStockChange(e.target.checked)} />
+                {' '}
+                Only show products in stock
+            </label>
+        </form>
+    )
+}
 
-  return (
-    <div className='histories'>
-      <button className='history-item' onClick={handleSortClick}>
-        Sort: {sortAsc ? "ASC" : "DESC"}
-      </button>
-      {historiesComponents}
-      <div className='history-label'>
-        You are at move #{histories.length - 1}
-      </div>
-    </div>
-  )
+function FilterableProductTable({ data }) {
+    const [filterText, setFilterText] = useState("")
+    const [inStockOnly, setInStockOnly] = useState(false)
+
+    const filteredData = data.filter(item => {
+        if (inStockOnly) {
+            return item.stocked
+        }
+        return true
+    }).filter(item => {
+        if (filterText) {
+            return item.name.toLowerCase().includes(filterText.toLowerCase())
+        }
+        return true
+    })
+
+    return (
+        <div>
+            <SearchBar
+                filterText={filterText}
+                inStockOnly={inStockOnly}
+                onFilterTextChange={setFilterText}
+                onInStockChange={setInStockOnly}
+            />
+            <ProductTable data={filteredData} />
+        </div>
+    )
 }
 
 function App() {
-  const [histories, setHistories] = useState([
-    { squares: Array(9).fill(""), move: [] }
-  ])
-  const [currentHistory, setCurrentHistory] = useState(0)
-
-  const squares = histories[currentHistory].squares
-
-  function handleSquareClick(index, move) {
-    if (squares[index] || !!calculateWinner(squares).length) return
-
-    const newSquares = squares.slice()
-    newSquares[index] = xIsNext ? "X" : "O"
-
-    const newHistories = [
-      ...histories.slice(0, currentHistory + 1),
-      { squares: newSquares, move }
-    ]
-
-    setHistories(newHistories)
-    setCurrentHistory(currentHistory + 1)
-  }
-
-  function handleHistoryClick(index) {
-    setCurrentHistory(index)
-  }
-
-  const xIsNext = currentHistory % 2 === 0
-
-  return (
-    <div className='game'>
-      <Board xIsNext={xIsNext} squares={squares} onSquareClick={handleSquareClick} />
-      <History histories={histories} onItemClick={handleHistoryClick} />
-    </div>
-  )
+    return (
+        <FilterableProductTable data={PRODUCTS} />
+    )
 }
 
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ]
-
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i]
-    if (squares[a] && squares[a] === squares[b] && squares[b] === squares[c]) {
-      return lines[i]
-    }
-  }
-
-  return []
-}
+const PRODUCTS = [
+    { category: "Fruits", price: "$1", stocked: true, name: "Apple" },
+    { category: "Fruits", price: "$1", stocked: true, name: "Dragonfruit" },
+    { category: "Fruits", price: "$2", stocked: false, name: "Passionfruit" },
+    { category: "Vegetables", price: "$2", stocked: true, name: "Spinach" },
+    { category: "Vegetables", price: "$4", stocked: false, name: "Pumpkin" },
+    { category: "Vegetables", price: "$1", stocked: true, name: "Peas" }
+];
 
 export default App
-
-// todo: continue react docs (thinking in react)
